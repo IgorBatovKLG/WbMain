@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    platform: postgres
+    url: jdbc:postgresql://5.tcp.eu.ngrok.io:16548/wbBase
+    username: postgres
+    password: Stalker5452!
+    driverClassName: org.postgresql.Driver
+
+#  jpa:
+#    generate-ddl: true
+#    hibernate:
+#      ddl-auto: create
+
+    properties:
+      hibernate:
+        format_sql: true
+
+#    show-sql: true
+
+
+logging:
+  level:
+    ROOT: INFO
