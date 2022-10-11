@@ -1,6 +1,7 @@
 package ru.batov.wbmain.services;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 import ru.batov.wbmain.controllers.GlobalVariables;
@@ -25,6 +26,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 @Service
@@ -59,7 +61,19 @@ public class CheckProductWbServices {
             response = client.send(build, HttpResponse.BodyHandlers.ofString());
             JsonSkillet jsonSkillet = gson.fromJson(response.body(), JsonSkillet.class);
             products = jsonSkillet.getData().getProducts();
-        } catch (InterruptedException | URISyntaxException | IOException | NullPointerException e) {
+        } catch (InterruptedException | URISyntaxException | IOException | JsonSyntaxException e) {
+
+            System.out.println(e.getMessage() + " " + catalog + " " + subject + " " + page);
+            GlobalVariables.ExceptionCount++;
+        } catch (NullPointerException e) {
+            if (page>200){
+                GlobalVariables.ExceptionCount++;
+                products = new ArrayList<>();
+                ProductSkillet productSkillet = null;
+                products.add(productSkillet);
+                return products;
+            }
+            System.out.println("NullPointerException " + catalog + " " + subject + " " + page);
             GlobalVariables.ExceptionCount++;
         }
         return products;
@@ -89,7 +103,9 @@ public class CheckProductWbServices {
                                     .Iteration14(0)
                                     .build();
                             productRepositories.saveDiscountEntity(build);
-
+                            if (product.getName().length()> 254) {
+                                product.setName(product.getName().substring(0, 254));
+                            }
                             ProductEntity entity = ProductEntity.builder()
                                     .id(0)
                                     .productId(Integer.parseInt(product.getId()))
@@ -108,7 +124,7 @@ public class CheckProductWbServices {
                                     .product_id(entity.getId())
                                     .price(Integer.parseInt(product.getSalePriceU()))
                                     .priceId(entity.getIteration())
-                                    .date(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME).toString())
+                                    .date(LocalDateTime.now())
                                     .build());
                             GlobalVariables.NewProductCount++;
                         } else {
@@ -118,7 +134,7 @@ public class CheckProductWbServices {
                                     .product_id(byProductId.getId())
                                     .price(Integer.parseInt(product.getSalePriceU()))
                                     .priceId(byProductId.getIteration())
-                                    .date(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME).toString())
+                                    .date(LocalDateTime.now())
                                     .build());
                             productRepositories.updateProductEntity(byProductId);
                             GlobalVariables.UpdateProductCount++;
@@ -133,30 +149,46 @@ public class CheckProductWbServices {
                 }
             } else {
                 GlobalVariables.NullProductCount++;
+                lessThan1000 = false;
+                break;
             }
         }
         return lessThan1000;
     }
 
     public void operator() {
+
+        GlobalVariables.HashMap = new HashMap<>();
+
         System.out.println("Start check products");
         System.out.println("Start check products");
         System.out.println("Start check products");
         List<CatalogEntity> catalogEntityBySubCatalogId = catalogRepositories.findCatalogEntityBySubCatalogId(1);
         for (CatalogEntity catalogEntity : catalogEntityBySubCatalogId) {
             Runnable runnable = () -> {
+
+
                 List<SubjectIdEntity> subjectIdEntityByCatalogId = catalogRepositories.findSubjectIdEntityByCatalogId(catalogEntity.getId());
+                GlobalVariables.HashMap.put(Thread.currentThread().getName(), subjectIdEntityByCatalogId.size());
                 for (SubjectIdEntity idEntity : subjectIdEntityByCatalogId) {
-                    int page = 1;
-                    boolean lessThan1000 = true;
-                    while (lessThan1000) {
-                        List<ProductSkillet> products = getProducts(catalogEntity.getName(), idEntity.getSubject(), page);
-                        lessThan1000 = checkProduct(products);
-                        page++;
+                    GlobalVariables.HashMap.put(Thread.currentThread().getName(), GlobalVariables.HashMap.get(Thread.currentThread().getName()) - 1);
+                    try {
+
+
+                        int page = 1;
+                        boolean lessThan1000 = true;
+                        while (lessThan1000) {
+                            List<ProductSkillet> products = getProducts(catalogEntity.getName(), idEntity.getSubject(), page);
+                            lessThan1000 = checkProduct(products);
+                            page++;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                    System.out.println("Finish check products " + Thread.currentThread().getName());
-                    GlobalVariables.ThreadCount--;
                 }
+                System.out.println("Finish check products " + Thread.currentThread().getName());
+                GlobalVariables.ThreadCount--;
+
             };
             Thread thread = new Thread(runnable);
             GlobalVariables.ThreadCount++;
@@ -164,5 +196,20 @@ public class CheckProductWbServices {
 
         }
     }
+//Удаляем последний поэтому складываем не ид а сам объект
+    public void deleteDuplicate() {
+        List<PriceProductEntity> priceProductEntityByDateStartAndDateFinish = productRepositories.getPriceProductEntityByDateStartAndDateFinish(LocalDateTime.now().minusHours(2), LocalDateTime.now());
+        System.out.println(priceProductEntityByDateStartAndDateFinish.size());
+        ArrayList<Long> ids = new ArrayList<>();
+        for (PriceProductEntity priceProductEntity : priceProductEntityByDateStartAndDateFinish) {
+            if (ids.contains(priceProductEntity.getProduct_id())) {
+                productRepositories.deletePriceProductEntity(priceProductEntity);
+            }
+            ids.add(priceProductEntity.getProduct_id());
+        }
+        System.out.println(ids.size());
+
+    }
+
 
 }

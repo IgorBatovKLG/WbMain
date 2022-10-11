@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Data
@@ -19,6 +20,6 @@ public class PriceProductEntity {
     private long id;
     private long product_id;
     private int priceId;
-    private String date;
+    private LocalDateTime date;
     private int price;
 }
