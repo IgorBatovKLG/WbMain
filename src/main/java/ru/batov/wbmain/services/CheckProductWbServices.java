@@ -13,9 +13,9 @@ import ru.batov.wbmain.models.products.ProductEntity;
 import ru.batov.wbmain.models.wbJsons.JsonSkillet;
 import ru.batov.wbmain.models.wbJsons.ProductSkillet;
 import ru.batov.wbmain.repositories.CatalogRepositories;
+import ru.batov.wbmain.repositories.JDBSProductRepositories;
 import ru.batov.wbmain.repositories.ProductRepositories;
 
-import javax.transaction.Transactional;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -24,10 +24,12 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+
+import static java.lang.Thread.sleep;
 
 @Service
 public class CheckProductWbServices {
@@ -37,9 +39,11 @@ public class CheckProductWbServices {
 
     private final CatalogRepositories catalogRepositories;
 
-    public CheckProductWbServices(ProductRepositories productRepositories, CatalogRepositories catalogRepositories) {
+    private final JDBSProductRepositories jdbSProductRepositories;
+    public CheckProductWbServices(ProductRepositories productRepositories, CatalogRepositories catalogRepositories, JDBSProductRepositories jdbSProductRepositories) {
         this.productRepositories = productRepositories;
         this.catalogRepositories = catalogRepositories;
+        this.jdbSProductRepositories = jdbSProductRepositories;
     }
 
 
@@ -87,13 +91,13 @@ public class CheckProductWbServices {
             if(!(product ==null)) {
                 if (!ids.contains(product.getId())) {
 
-                    ProductEntity byProductId = null;
+                    int byProductId = 0;
                     try {
-                        byProductId = productRepositories.findByProductId(Integer.parseInt(product.getId()));
+                        byProductId = jdbSProductRepositories.getCountProductEntity(Integer.parseInt(product.getId()));
                     } catch (EmptyResultDataAccessException e) {
                     }
                     if (Integer.parseInt(product.getSalePriceU()) < 1000_00) {
-                        if (byProductId == null) {
+                        if (byProductId == 0) {
 
                             DiscountEntity build = DiscountEntity
                                     .builder()
@@ -128,15 +132,13 @@ public class CheckProductWbServices {
                                     .build());
                             GlobalVariables.NewProductCount++;
                         } else {
-                            byProductId.setIteration(byProductId.getIteration() + 1);
                             productRepositories.savePriceProductEntity(PriceProductEntity.builder()
                                     .id(0)
-                                    .product_id(byProductId.getId())
+                                    .product_id(byProductId)
                                     .price(Integer.parseInt(product.getSalePriceU()))
-                                    .priceId(byProductId.getIteration())
+                                    .priceId(0)
                                     .date(LocalDateTime.now())
                                     .build());
-                            productRepositories.updateProductEntity(byProductId);
                             GlobalVariables.UpdateProductCount++;
                         }
                     } else {
@@ -157,6 +159,7 @@ public class CheckProductWbServices {
     }
 
     public void operator() {
+        //GlobalVariables.ThreadList = new ArrayList<>();
 
         GlobalVariables.HashMap = new HashMap<>();
 
@@ -186,33 +189,58 @@ public class CheckProductWbServices {
                         e.printStackTrace();
                     }
                 }
-                System.out.println("Finish check products " + Thread.currentThread().getName());
-                GlobalVariables.ThreadCount--;
 
             };
             Thread thread = new Thread(runnable);
-            GlobalVariables.ThreadCount++;
             thread.start();
-
+            //GlobalVariables.ThreadList.add(thread);
+            GlobalVariables.ThreadCount=12;
         }
     }
-//Удаляем последний поэтому складываем не ид а сам объект
+
     public void deleteDuplicate() {
-        List<PriceProductEntity> priceProductEntityByDateStartAndDateFinish = productRepositories.getPriceProductEntityByDateStartAndDateFinish(LocalDateTime.now().minusHours(24), LocalDateTime.now());
+        List<PriceProductEntity> priceProductEntityByDateStartAndDateFinish = productRepositories.getPriceProductEntityByDateStartAndDateFinish(GlobalVariables.start.minusMinutes(30), LocalDateTime.now());
 
         ArrayList<Long> ids = new ArrayList<>();
-        ArrayList<Long> idsDouble = new ArrayList<>();
+        System.out.println(priceProductEntityByDateStartAndDateFinish.size());
+        int i = 0;
+        int count = 0;
 
         for (PriceProductEntity priceProductEntity : priceProductEntityByDateStartAndDateFinish) {
+            i++;
+            if(i%10000 == 0) {
+                System.out.println(i);
+            }
+
             if (ids.contains(priceProductEntity.getProduct_id())) {
-                idsDouble.add(priceProductEntity.getId());
+                List<PriceProductEntity> productEntityList = productRepositories.getPriceProductEntityByDateStartAndDateFinishAndProductId(GlobalVariables.start.minusMinutes(10), LocalDateTime.now(), priceProductEntity.getProduct_id());
+                PriceProductEntity priceProductEntity1 = productEntityList.stream().max(Comparator.comparing(PriceProductEntity::getPriceId)).get();
+                productRepositories.deletePriceProductEntity(priceProductEntity1);
+                count++;
             } else {
                 ids.add(priceProductEntity.getProduct_id());
             }
             ids.add(priceProductEntity.getProduct_id());
         }
-        System.out.println(idsDouble);
+        System.out.println("Удалили " + count + " дубликатов");
+    }
 
+    public void manegeDiscount() {
+        Runnable runnable = () -> {
+
+            while (true) {
+                for (Thread thread : GlobalVariables.ThreadList) {
+                    if (!thread.isAlive()) {
+                        GlobalVariables.ThreadList.remove(thread);
+                    }
+                }
+                try {
+                    sleep(1000*60);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
     }
 
 

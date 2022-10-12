@@ -42,6 +42,14 @@ public class ProductRepositoriesImpl implements ProductRepositories {
         return query.getResultList();
     }
     @Override
+    public List<PriceProductEntity> getPriceProductEntityByDateStartAndDateFinishAndProductId(LocalDateTime dateStart, LocalDateTime dateFinish, long productId) {
+        TypedQuery<PriceProductEntity> query = em.createQuery("select p from PriceProductEntity p where p.date >= :dateStart and p.date <= :dateFinish and p.product_id = :productId", PriceProductEntity.class);
+        query.setParameter("dateStart", dateStart);
+        query.setParameter("dateFinish", dateFinish);
+        query.setParameter("productId", productId);
+        return query.getResultList();
+    }
+    @Override
     public void deletePriceProductEntity(PriceProductEntity priceProductEntity) {
         em.remove(priceProductEntity);
     }
@@ -50,13 +58,24 @@ public class ProductRepositoriesImpl implements ProductRepositories {
     public void saveDiscountEntity(DiscountEntity discountEntity) {
         em.persist(discountEntity);
     }
+
+
     @Override
-    public ProductEntity findByProductId(int productId) {
+    public ProductEntity ProductEntity(int productId) {
         TypedQuery<ProductEntity> query = em.createQuery("select p from ProductEntity p " +
                     "where p.productId = :productId", ProductEntity.class);
             query.setParameter("productId", productId);
         return query.getSingleResult();
     }
+    @Override
+    public long countProductEntityByProductId(int productId) {
+        TypedQuery<Long> query = em.createQuery("select count(p) from ProductEntity p " +
+                    "where p.productId = :productId", Long.class);
+            query.setParameter("productId", productId);
+        return query.getSingleResult();
+    }
+
+
     @Override
     public void updateProductEntity(ProductEntity productEntity) {
         em.merge(productEntity);

@@ -1,7 +1,7 @@
 spring:
   datasource:
     platform: postgres
-    url: jdbc:postgresql://6.tcp.eu.ngrok.io:11592/wbBase
+    url: jdbc:postgresql://192.168.1.65:5432/wbBase
 #    url: jdbc:postgresql://localhost:5432/wbBase
     username: postgres
     password: Stalker5452!

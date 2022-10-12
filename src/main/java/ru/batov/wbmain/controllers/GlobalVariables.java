@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 
 
 public class GlobalVariables {
@@ -17,4 +18,6 @@ public class GlobalVariables {
     public static LocalDateTime start = null;
 
     public static HashMap<String, Integer> HashMap = null;
+
+    public static List<Thread> ThreadList = null;
 }

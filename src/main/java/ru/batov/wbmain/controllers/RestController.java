@@ -37,6 +37,7 @@ public class RestController {
         GlobalVariables.start = LocalDateTime.now();
         CheckProductWbServices bean = context.getBean(CheckProductWbServices.class);
         bean.operator();
+        //bean.manegeDiscount();
         return "start";
 
     }

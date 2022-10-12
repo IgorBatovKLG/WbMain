@@ -18,11 +18,15 @@ public interface ProductRepositories {
 
     List<PriceProductEntity> getPriceProductEntityByDateStartAndDateFinish(LocalDateTime dateStart, LocalDateTime dateFinish);
 
+    List<PriceProductEntity> getPriceProductEntityByDateStartAndDateFinishAndProductId(LocalDateTime dateStart, LocalDateTime dateFinish, long productId);
+
     void deletePriceProductEntity(PriceProductEntity priceProductEntity);
 
     void saveDiscountEntity(DiscountEntity discountEntity);
 
-    ProductEntity findByProductId(int productId);
+    ProductEntity ProductEntity(int productId);
+
+    long countProductEntityByProductId(int productId);
 
     void updateProductEntity(ProductEntity productEntity);
 
