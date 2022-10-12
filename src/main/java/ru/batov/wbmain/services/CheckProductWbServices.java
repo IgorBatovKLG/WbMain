@@ -198,16 +198,20 @@ public class CheckProductWbServices {
     }
 //Удаляем последний поэтому складываем не ид а сам объект
     public void deleteDuplicate() {
-        List<PriceProductEntity> priceProductEntityByDateStartAndDateFinish = productRepositories.getPriceProductEntityByDateStartAndDateFinish(LocalDateTime.now().minusHours(2), LocalDateTime.now());
-        System.out.println(priceProductEntityByDateStartAndDateFinish.size());
+        List<PriceProductEntity> priceProductEntityByDateStartAndDateFinish = productRepositories.getPriceProductEntityByDateStartAndDateFinish(LocalDateTime.now().minusHours(24), LocalDateTime.now());
+
         ArrayList<Long> ids = new ArrayList<>();
+        ArrayList<Long> idsDouble = new ArrayList<>();
+
         for (PriceProductEntity priceProductEntity : priceProductEntityByDateStartAndDateFinish) {
             if (ids.contains(priceProductEntity.getProduct_id())) {
-                productRepositories.deletePriceProductEntity(priceProductEntity);
+                idsDouble.add(priceProductEntity.getId());
+            } else {
+                ids.add(priceProductEntity.getProduct_id());
             }
             ids.add(priceProductEntity.getProduct_id());
         }
-        System.out.println(ids.size());
+        System.out.println(idsDouble);
 
     }
 
